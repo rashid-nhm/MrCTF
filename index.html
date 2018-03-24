@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="terminal.resources/js/jquery-1.7.1.min.js"></script>
+		<script src="terminal.resources/js/jquery.mousewheel-min.js"></script>
+		<script src="terminal.resources/js/jquery.terminal.min.js"></script>
+		<script src="terminal.resources/js/sql.js" async></script>
+		
+		<script src="terminal.resources/js/terminal.commands.js"></script>
+		<script src="terminal.resources/js/sql.commands.js" ></script>
+		
+		<link href="terminal.resources/css/jquery.terminal.min.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<script>
+			var prmpt = "elliot.alderson@allsafe:~$";
+			var current_directory = "/home/elliot/";
+
+			$(document).ready(function(){
+				$('body').terminal(function(command, term) {
+					command = command.trim();
+					if (command == "") { return ""; 
+					} else if (command.startsWith('help')) {
+						if (command.trim() == 'help'){
+							term.echo(get_help());
+						}
+						else { term.echo("Invalid command. Help does not take any arguments"); }
+					} 
+					command = clean_array(command.trim().split(' ')).join(' ');
+					if (command.startsWith('ls')) {
+						term.echo(list_directory(command, current_directory));
+					} else if (command.startsWith('man')) {
+						term.echo(get_command_info(command));
+					} else if (command.startsWith('pwd')) {
+						term.echo(current_directory);
+					} else if (command.startsWith('cat')) {
+						term.echo(read_file(command, current_directory));
+					} else if (command.startsWith('cd')) {
+						var n = change_directory(command, current_directory);
+						if (!(current_directory == n[0])){
+							current_directory = n[0];
+							term.set_prompt(n[1]);
+						}
+					} else if (command.startsWith("nslookup")) {
+						term.echo(host_lookup(command));
+					} else if (command.startsWith("sql")) {
+						if (current_directory.endsWith("Database/") && command.endsWith("user_profiles.db")){
+								if (!database_exists()) { create_database(); }
+								term.push(function(command, term){
+									term.echo(run_select(command));
+								},{ name: 'sql', prompt: 'SQL>'});
+						} else { throw "Error! Database file not valid"; }
+					}	else if (command.startsWith('ssh')) {
+						term.echo("Attempting to connect...");
+						var try_racs = remote_access(command);
+						if (try_racs[0]) {
+							term.push(function(command, term){
+								if (command.startsWith("help")) {
+									term.echo("You shouldn't need any help. Use the custom alias commands to find your way through");
+								} else if (command.trim() == "whoami") {
+									term.echo("\n*************************************\n     CONGRATS YOU FOUND A FLAG\n  FF55A4309C860A39CD604DDC8CB2ECBC\n*************************************\n")
+								}
+							},{
+								name: "Ecorp",
+								prompt: try_racs[1] + "@data-ecorp:~$",
+								greetings: "\nAuthorized AllSafe users only!\n"
+							});
+						} else {
+							throw "Unable to connect. Please double check all input";
+						}
+					}							
+				}, {
+					name: "Main",
+					greetings: "Welcome Elliot to AllSafe core server.\nPlease type 'help' to get started.\n\n",
+					prompt: "elliot.alderson@allsafe:~$",
+					onBlur: function() {
+						return false;
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
